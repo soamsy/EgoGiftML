@@ -1,0 +1,24 @@
+[project]
+name = "ego-gift-ml"
+version = "0.1.1"
+description = "ML Model for gift detection in limbus company"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.1.3",
+    "opencv-python>=5.0.0.93",
+    "pillow>=12.3.0",
+    "requests>=2.34.2",
+    "torch>=2.13.0",
+    "torchvision>=0.28.0",
+    "ultralytics>=8.4.100",
+]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cuda" }]
+torchvision = [{ index = "pytorch-cuda" }]
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true

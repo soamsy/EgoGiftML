@@ -1,0 +1,1 @@
+ALTER TABLE ego_gifts ADD COLUMN trouble_rating REAL NOT NULL DEFAULT 1.0;

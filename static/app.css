@@ -1,0 +1,44 @@
+.tier-badge {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.45rem;
+  font-weight: 800;
+  font-size: 2.8rem;
+  line-height: 1;
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  letter-spacing: 0.03em;
+  color: #fde047;
+  text-shadow:
+    -1.5px -1.5px 0 #7c2d12,
+    1.5px -1.5px 0 #7c2d12,
+    -1.5px 1.5px 0 #7c2d12,
+    1.5px 1.5px 0 #7c2d12,
+    0 0 4px #f97316,
+    0 0 10px #ea580c,
+    0 0 18px #c2410c;
+}
+
+.affinity-badge {
+  position: absolute;
+  bottom: 0.35rem;
+  right: 0.35rem;
+  width: 3.75rem;
+  height: 3.75rem;
+  padding: 0.2rem;
+  border-radius: 9999px;
+  /* background: rgba(0, 0, 0, 0.55); */
+  /* box-shadow: 0 0 4px rgba(0, 0, 0, 0.6); */
+  object-fit: contain;
+}
+
+/* GLL markup: #keyword# tags */
+.text-tag-hash {
+  color: #22d3ee;
+  font-weight: 600;
+}
+
+/* GLL markup: $[trigger condition]$ tags */
+.text-tag-bracket {
+  color: #c084fc;
+  font-weight: 600;
+}

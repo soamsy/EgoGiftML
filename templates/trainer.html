@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Trainer{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='trainer.css') }}">
+{% endblock %}
+
+{% block content %}
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-4 gap-10">
+      <h1 class="text-3xl font-bold alert alert-success">Manual Trainer</h1>
+      <div class="flex gap-2">
+        <a href="{{ url_for('tester.index') }}" class="btn btn-sm btn-outline">Model Tester</a>
+        <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline">Gift Browser</a>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <input
+        id="image-search"
+        type="text"
+        list="image-datalist"
+        placeholder="search screenshots…"
+        autocomplete="off"
+        class="input input-bordered w-full max-w-md"
+      >
+      <datalist id="image-datalist">
+        {% for path in images %}
+        <option value="{{ path }}"></option>
+        {% endfor %}
+      </datalist>
+      <div class="join">
+        <button id="prev-image-btn" type="button" class="btn btn-xs join-item">‹ Prev (PgUp)</button>
+        <button id="next-image-btn" type="button" class="btn btn-xs join-item">Next › (PgDown)</button>
+      </div>
+      <span id="image-status" class="text-sm opacity-70 mr-auto"></span>
+      <span class="text-sm opacity-50">{{ images|length }} images found</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      <div class="ml-auto mr-auto">
+        <div class="inline-block bg-base-200 rounded-lg overflow-hidden">
+          <canvas id="canvas"></canvas>
+        </div>
+        <p id="draw-hint" class="text-sm mt-2 opacity-70">Pick a screenshot in the selector</p>
+      </div>
+
+      <div class="bg-base-200 rounded-lg p-4 h-fit">
+        <div class="tooltip tooltip-bottom mb-4" data-tip="When checked, this image is excluded from training but will still be included in a test suite (to be added later).">
+          <label class="label cursor-pointer justify-start gap-2 w-fit">
+            <input type="checkbox" id="ignore-training-toggle" class="toggle toggle-warning toggle-sm" disabled>
+            <span class="label-text">Ignore for training</span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-semibold">Crop Region</h2>
+          <div class="flex gap-1">
+            <button id="whole-image-btn" class="btn btn-xs btn-outline" disabled>Whole image</button>
+            <button id="draw-region-btn" class="btn btn-xs btn-outline" disabled>Draw region</button>
+          </div>
+        </div>
+        <p id="region-display" class="text-xs opacity-70 mb-2">not set</p>
+        <div class="tooltip tooltip-bottom mb-4" data-tip="Runs the newest trained detector+classifier on the region and fills in the gift list below as a starting point -- review and correct before saving.">
+          <button id="autodetect-btn" class="btn btn-xs btn-outline btn-block" disabled>Auto-detect gifts</button>
+        </div>
+        <p id="autodetect-status" class="text-xs mt-1 mb-2"></p>
+
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-semibold">Gifts</h2>
+          <button id="add-gift-btn" class="btn btn-xs btn-primary" disabled>+ Add gift</button>
+        </div>
+        <div id="gift-list" class="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1"></div>
+
+        <button id="save-btn" class="btn btn-success btn-block mt-6" disabled>Save</button>
+        <p id="save-status" class="text-sm mt-2"></p>
+        <p id="post-instructions" class="text-sm mt-2 opacity-90">Once training regions are defined, run [placeholder] to begin training models</p>
+      </div>
+
+    </div>
+  </div>
+
+  <datalist id="known-gifts-datalist">
+    {% for g in known_gifts %}
+    <option value="{{ g.name }}"></option>
+    {% endfor %}
+  </datalist>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    const IMAGES = {{ images | tojson }};
+    const MANUAL_DATA = {{ manual_data | tojson }};
+    const KNOWN_GIFTS = {{ known_gifts | tojson }};
+    const SAVE_URL = "{{ url_for('trainer.save') }}";
+    const AUTODETECT_URL = "{{ url_for('trainer.autodetect') }}";
+  </script>
+  <script src="{{ url_for('static', filename='trainer.js') }}"></script>
+{% endblock %}

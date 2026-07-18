@@ -1,0 +1,9 @@
+#canvas {
+  display: block;
+  max-width: 100%;
+  cursor: default;
+}
+
+#canvas.armed {
+  cursor: crosshair;
+}

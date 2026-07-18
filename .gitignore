@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local database + images
+data/llc/
+data/synth/
+
+# Model weights
+*.pt
+!models/best/*.pt
+
+models/v*/
+
+# Editor
+.vscode/

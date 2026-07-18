@@ -1,0 +1,32 @@
+{
+  "version": "v23",
+  "trained_at": "2026-07-19T15:54:18.826409+00:00",
+  "args": {
+    "repeats": 24,
+    "seed": 0,
+    "skip_synth": false,
+    "val_frac": 0.1,
+    "detector_epochs": 30,
+    "detector_imgsz": 384,
+    "detector_batch": 64,
+    "classifier_epochs": 16,
+    "classifier_batch": 128,
+    "keep_tmp": false
+  },
+  "dataset": {
+    "manual_images": 469,
+    "synthetic_images": 1817
+  },
+  "detector_metrics": {
+    "metrics/precision(B)": 0.9999905736678426,
+    "metrics/recall(B)": 0.9995414947271893,
+    "metrics/mAP50(B)": 0.995,
+    "metrics/mAP50-95(B)": 0.9288357315188553,
+    "fitness": 0.9288357315188553,
+    "imgsz": 384
+  },
+  "classifier_metrics": {
+    "val_acc": 1.0,
+    "num_classes": 451
+  }
+}

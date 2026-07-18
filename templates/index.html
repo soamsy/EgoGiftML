@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}EGO Gift Browser{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+{% endblock %}
+
+{% block content %}
+  <div class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-4 gap-10">
+      <h1 class="text-3xl font-bold alert alert-warning">EGO Gift Browser</h1>
+      <div class="flex gap-2">
+        <a href="{{ url_for('trainer.index') }}" class="btn btn-sm btn-outline">Manual Trainer</a>
+        <a href="{{ url_for('tester.index') }}" class="btn btn-sm btn-outline">Model Tester</a>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-6">
+      <input
+        id="search"
+        type="text"
+        placeholder="Search by name…"
+        class="input input-bordered w-full max-w-xs"
+      >
+
+      <div class="dropdown">
+        <div tabindex="0" role="button" class="btn btn-sm">
+          Affinity
+          <span id="affinity-badge" class="badge badge-sm badge-primary hidden"></span>
+        </div>
+        <ul tabindex="0" class="dropdown-content menu z-10 w-56 max-h-72 overflow-y-auto flex-nowrap bg-base-200 rounded-box p-2 shadow">
+          {% for affinity in affinities %}
+          <li>
+            <label class="label cursor-pointer justify-start gap-2">
+              <input type="checkbox" class="checkbox checkbox-sm affinity-filter" value="{{ affinity }}">
+              <span class="label-text capitalize">{{ affinity }}</span>
+            </label>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="dropdown">
+        <div tabindex="0" role="button" class="btn btn-sm">
+          Tier
+          <span id="tier-badge" class="badge badge-sm badge-primary hidden"></span>
+        </div>
+        <ul tabindex="0" class="dropdown-content menu z-10 w-40 max-h-72 overflow-y-auto flex-nowrap bg-base-200 rounded-box p-2 shadow">
+          {% for tier in tiers %}
+          <li>
+            <label class="label cursor-pointer justify-start gap-2">
+              <input type="checkbox" class="checkbox checkbox-sm tier-filter" value="{{ tier }}">
+              <span class="label-text">{{ tier|roman }}</span>
+            </label>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <span id="result-count" class="text-sm opacity-70 ml-auto"></span>
+    </div>
+
+    <div id="gift-grid" class="grid grid-cols-5 gap-4">
+      {% for gift in gifts %}
+      <div
+        class="gift-card"
+        data-name="{{ gift.name|lower }}"
+        data-affinity="{{ gift.affinity or '' }}"
+        data-tier="{{ gift.tier or '' }}"
+      >
+        <a href="{{ url_for('gift_detail', gift_id=gift.id) }}" class="block group">
+          <div class="relative rounded-lg overflow-hidden bg-base-200 aspect-square transition group-hover:ring-2 group-hover:ring-primary">
+            {% if gift.image_filename %}
+            <img
+              src="{{ url_for('serve_image', filename=gift.image_filename) }}"
+              alt="{{ gift.name }}"
+              class="w-full h-full object-fit"
+              loading="lazy"
+            >
+            {% else %}
+            <div class="w-full h-full flex items-center justify-center text-xs opacity-50 px-2 text-center">
+              no image
+            </div>
+            {% endif %}
+
+            {% if gift.tier %}
+            <span class="tier-badge">{{ gift.tier|roman }}</span>
+            {% endif %}
+
+            {% if gift.affinity and gift.affinity != "none" %}
+            <img
+              class="affinity-badge"
+              src="{{ url_for('static', filename='affinity/' + gift.affinity + '.webp') }}"
+              alt="{{ gift.affinity }}"
+              title="{{ gift.affinity|capitalize }}"
+              loading="lazy"
+            >
+            {% endif %}
+          </div>
+          <p class="text-center text-sm mt-1 truncate" title="{{ gift.name }}">{{ gift.name }}</p>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

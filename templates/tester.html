@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Model Tester{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='trainer.css') }}">
+{% endblock %}
+
+{% block content %}
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-3xl font-bold">Model Tester</h1>
+      <div class="flex gap-2">
+        <a href="{{ url_for('trainer.index') }}" class="btn btn-sm btn-outline">Manual Trainer</a>
+        <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline">Gift Browser</a>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <input
+        id="image-search"
+        type="text"
+        list="image-datalist"
+        placeholder="search images…"
+        autocomplete="off"
+        class="input input-bordered w-full max-w-md"
+      >
+      <datalist id="image-datalist">
+        {% for path in images %}
+        <option value="{{ path }}"></option>
+        {% endfor %}
+      </datalist>
+      <div class="join">
+        <button id="prev-image-btn" type="button" class="btn btn-xs join-item">‹ Prev (PgUp)</button>
+        <button id="next-image-btn" type="button" class="btn btn-xs join-item">Next › (PgDown)</button>
+      </div>
+      <span id="image-status" class="text-sm opacity-70 mr-auto"></span>
+      <span class="text-sm opacity-50">{{ images|length }} images found</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      <div>
+        <div class="ml-auto mr-auto w-fit">
+          <div class="inline-block bg-base-200 rounded-lg overflow-hidden">
+            <canvas id="canvas"></canvas>
+          </div>
+          <p id="draw-hint" class="text-sm mt-2 opacity-70">Pick an image above to begin.</p>
+        </div>
+
+        <div class="bg-base-200 rounded-lg p-4 mt-4">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="font-semibold">Results</h2>
+            <span id="timing-display" class="text-xs opacity-60"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table table-xs">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>x, y, w, h</th>
+                  <th>Detector conf.</th>
+                  <th>Gift</th>
+                  <th>Classifier conf.</th>
+                </tr>
+              </thead>
+              <tbody id="results-body">
+                <tr><td colspan="5" class="opacity-50">No run yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="compare-section" class="bg-base-200 rounded-lg p-4 mt-4 hidden">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="font-semibold">Compare to Training Data</h2>
+            <span id="compare-summary" class="text-xs opacity-70"></span>
+          </div>
+          <div class="flex flex-wrap gap-3 mb-2 text-xs">
+            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 border-2 border-dashed" style="border-color:#c084fc"></span> ground truth</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 border-2" style="border-color:#4ade80"></span> matched</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 border-2" style="border-color:#fb923c"></span> wrong id</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 border-2" style="border-color:#9ca3af"></span> unclassified</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 border-2" style="border-color:#f87171"></span> false positive</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 border-2 border-dashed" style="border-color:#f472b6"></span> missed</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table table-xs">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Ground truth</th>
+                  <th>Predicted</th>
+                  <th>Status</th>
+                  <th>IoU</th>
+                  <th>Det. conf</th>
+                  <th>Cls. conf</th>
+                </tr>
+              </thead>
+              <tbody id="compare-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-base-200 rounded-lg p-4 h-fit flex flex-col gap-4">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="font-semibold">Region</h2>
+            <div class="flex gap-1">
+              <button id="whole-image-btn" class="btn btn-xs btn-outline" disabled>Whole image</button>
+              <button id="draw-region-btn" class="btn btn-xs btn-outline" disabled>Draw region</button>
+            </div>
+          </div>
+          <p id="region-display" class="text-xs opacity-70">not set</p>
+        </div>
+
+        <div>
+          <h2 class="font-semibold mb-2">Mode</h2>
+          <div class="join w-full">
+            <input type="radio" name="mode" class="join-item btn btn-xs flex-1" data-mode="detector" aria-label="Detector">
+            <input type="radio" name="mode" class="join-item btn btn-xs flex-1" data-mode="classifier" aria-label="Classifier">
+            <input type="radio" name="mode" class="join-item btn btn-xs flex-1" data-mode="both" checked aria-label="Both">
+          </div>
+        </div>
+
+        <div id="detector-settings" class="flex flex-col gap-2">
+          <h2 class="font-semibold">Detector</h2>
+          <label class="form-control">
+            <span class="label-text text-xs">Model version</span>
+            <select id="detector-version" class="select select-sm select-bordered">
+              {% for v in detector_versions %}
+              <option value="{{ v.version }}">{{ v.version }}{% if v.metadata.detector_metrics %} (mAP50 {{ '%.2f'|format(v.metadata.detector_metrics.get('metrics/mAP50(B)', 0)) }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="form-control">
+            <span class="label-text text-xs">Confidence threshold</span>
+            <input id="detector-conf" type="number" min="0" max="1" step="0.05" value="0.45" class="input input-sm input-bordered">
+          </label>
+          <label class="form-control">
+            <span class="label-text text-xs">IOU threshold (NMS)</span>
+            <input id="detector-iou" type="number" min="0" max="1" step="0.05" value="0.1" class="input input-sm input-bordered">
+          </label>
+          <label class="form-control">
+            <span class="label-text text-xs">Inference size (px)</span>
+            <input id="detector-imgsz" type="number" min="32" step="32" value="384" class="input input-sm input-bordered">
+          </label>
+        </div>
+
+        <div id="classifier-settings" class="flex flex-col gap-2">
+          <h2 class="font-semibold">Classifier</h2>
+          <label class="form-control">
+            <span class="label-text text-xs">Model version</span>
+            <select id="classifier-version" class="select select-sm select-bordered">
+              {% for v in classifier_versions %}
+              <option value="{{ v.version }}">{{ v.version }}{% if v.metadata.classifier_metrics %} (val_acc {{ '%.2f'|format(v.metadata.classifier_metrics.get('val_acc', 0) or 0) }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="form-control">
+            <span class="label-text text-xs">Top-K predictions</span>
+            <input id="classifier-topk" type="number" min="1" max="10" step="1" value="3" class="input input-sm input-bordered">
+          </label>
+          <label class="form-control">
+            <span class="label-text text-xs">Confidence cutoff</span>
+            <input id="classifier-conf" type="number" min="0" max="1" step="0.05" value="0.6" class="input input-sm input-bordered">
+          </label>
+        </div>
+
+        <button id="run-btn" class="btn btn-success btn-block" disabled>Run</button>
+        <p id="run-status" class="text-sm"></p>
+
+        <div class="tooltip tooltip-bottom w-full">
+          <button id="compare-btn" class="btn btn-outline btn-block" disabled>Compare to Training Data</button>
+        </div>
+        <p id="compare-status" class="text-sm"></p>
+
+        <div class="tooltip tooltip-bottom w-full" data-tip="Runs detector+classifier against every region+gifts entry in manual_train.json (including ignore_for_training images)">
+          <button id="eval-btn" class="btn btn-outline btn-block" {% if not detector_versions or not classifier_versions %}disabled{% endif %}>Run All (evaluate dataset)</button>
+        </div>
+        <p id="eval-status" class="text-sm"></p>
+
+        {% if not detector_versions and not classifier_versions %}
+        <p class="text-xs text-warning">No trained models found in models/. Run `uv run train.py` first.</p>
+        {% else %}
+        <p class="text-xs text-warning">Tweaked something and want a new model? Run `uv run train.py`.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="eval-section" class="bg-base-200 rounded-lg p-4 mt-6 hidden">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-semibold">Dataset Evaluation</h2>
+        <span id="eval-summary" class="text-xs opacity-70"></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="table table-xs">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Image</th>
+              <th title="drawn from manual_train.json's ignore_for_training flag">Ignored in training?</th>
+              <th>Expected</th>
+              <th>Matched</th>
+              <th>Wrong ID</th>
+              <th>Unclassified</th>
+              <th>False pos.</th>
+              <th>Missed</th>
+              <th>Avg det. conf</th>
+              <th>Avg cls. conf</th>
+            </tr>
+          </thead>
+          <tbody id="eval-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    const IMAGES = {{ images | tojson }};
+    const MANUAL_DATA = {{ manual_data | tojson }};
+    const RUN_URL = "{{ url_for('tester.run') }}";
+    const EVALUATE_URL = "{{ url_for('tester.evaluate') }}";
+    const COMPARE_URL = "{{ url_for('tester.compare') }}";
+  </script>
+  <script src="{{ url_for('static', filename='tester.js') }}"></script>
+{% endblock %}
