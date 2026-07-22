@@ -21,7 +21,7 @@ def find_images() -> list[str]:
     if not RESOURCES_DIR.exists():
         return []
     return sorted(
-        str(p.relative_to(RESOURCES_DIR))
+        p.relative_to(RESOURCES_DIR).as_posix()
         for p in RESOURCES_DIR.rglob("*")
         if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
     )
