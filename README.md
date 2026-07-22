@@ -13,7 +13,7 @@ Proof of concept machine learning model to detect ego gifts from Limbus Company
 uv sync
 uv run app.py
 ```
-Scroll down and click "Run All (Evaluate Dataset)"
+Visit http://localhost:5400/tester/. Scroll down and click "Run All (Evaluate Dataset)"
 ![Run All](runall1.png)
 
 Wait for results, and then load any image that didn't detect correctly
@@ -30,6 +30,7 @@ In general if you already know the region in an image where an ego gift should b
 - [Build Your Own Open-Source Logo Detector: A Practical Guide to ACR, Embeddings & Vector Search](https://www.analyticsvidhya.com/blog/2025/12/build-your-own-open-source-logo-detector/)
 - [A deep learning pipeline for product recognition on store shelves](https://arxiv.org/pdf/1810.01733)
 - [Large Scale Open-Set Deep Logo Detection](https://arxiv.org/pdf/1911.07440)
+
 Note: even if you know the general square where an ego gift is, it might be best to use a region detector for gifts that are not perfectly square.
 
 YOLO (you only look once) specifically tries to provide single pass detection, which didn't work so well for me, but YOLO nano is still a great option for a localization step. Getting single pass to work on things like logos/icons is still an open research problem.
