@@ -1,7 +1,3 @@
--- Ported from starlight/apps/asset_scraper priv/repo/migrations/20240101000000_create_ego_gifts.exs
--- Difference: `image` (BLOB) is replaced with `image_path` (TEXT), a path to the
--- image file on disk rather than the image bytes themselves. Starts NULL.
-
 CREATE TABLE IF NOT EXISTS ego_gifts (
   id              TEXT PRIMARY KEY,
   name            TEXT NOT NULL,
