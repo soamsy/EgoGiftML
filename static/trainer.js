@@ -18,6 +18,7 @@ const giftList = document.getElementById("gift-list");
 const saveBtn = document.getElementById("save-btn");
 const saveStatus = document.getElementById("save-status");
 const ignoreTrainingToggle = document.getElementById("ignore-training-toggle");
+const unreviewedOnlyToggle = document.getElementById("unreviewed-only-toggle");
 
 const nameToId = new Map(KNOWN_GIFTS.map((g) => [g.name.trim().toLowerCase(), g.id]));
 
@@ -449,13 +450,22 @@ saveBtn.addEventListener("click", async () => {
   }
 });
 
-function navigateImage(dx) {
-  if (IMAGES.length === 0) return;
-  const currentIndex = currentImage ? IMAGES.indexOf(currentImage) : (dx === 1 ? -1 : 0);
-  const nextIndex = (currentIndex + dx + IMAGES.length) % IMAGES.length;
+function navigableImages() {
+  if (!unreviewedOnlyToggle.checked) return IMAGES;
+  return IMAGES.filter((path) => MANUAL_DATA.gifts[path] && MANUAL_DATA.gifts[path].unreviewed);
+}
 
-  imageSearch.value = IMAGES[nextIndex];
-  loadImage(IMAGES[nextIndex]);
+function navigateImage(dx) {
+  const images = navigableImages();
+  if (images.length === 0) {
+    imageStatus.textContent = "no unreviewed images left";
+    return;
+  }
+  const currentIndex = currentImage ? images.indexOf(currentImage) : (dx === 1 ? -1 : 0);
+  const nextIndex = (currentIndex + dx + images.length) % images.length;
+
+  imageSearch.value = images[nextIndex];
+  loadImage(images[nextIndex]);
 }
 
 imageSearch.addEventListener("change", () => {

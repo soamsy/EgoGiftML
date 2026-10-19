@@ -46,7 +46,7 @@ def evaluate():
 
     for image_key, entry in manual_data["gifts"].items():
         region = entry.get("region")
-        if not is_valid_rect(region):
+        if not is_valid_rect(region) or entry.get("unreviewed"):
             skipped += 1
             continue
 

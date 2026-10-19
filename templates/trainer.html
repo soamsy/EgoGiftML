@@ -34,6 +34,10 @@
         <button id="prev-image-btn" type="button" class="btn btn-xs join-item">‹ Prev (PgUp)</button>
         <button id="next-image-btn" type="button" class="btn btn-xs join-item">Next › (PgDown)</button>
       </div>
+      <label class="flex items-center gap-2 text-sm">
+        <input id="unreviewed-only-toggle" type="checkbox" class="checkbox checkbox-xs">
+        Unreviewed only
+      </label>
       <span id="image-status" class="text-sm opacity-70 mr-auto"></span>
       <span class="text-sm opacity-50">{{ images|length }} images found</span>
     </div>
