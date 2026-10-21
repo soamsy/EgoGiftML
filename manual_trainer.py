@@ -118,6 +118,24 @@ def save():
     return jsonify(ok=True, entry=data["gifts"][image])
 
 
+@trainer_bp.route("/delete", methods=["POST"])
+def delete():
+    payload = request.get_json(silent=True)
+    if not payload:
+        abort(400, "invalid JSON body")
+
+    image = payload.get("image")
+    if not image or image not in find_images():
+        abort(400, "unknown image")
+
+    data = load_manual_train()
+    data["gifts"].pop(image, None)
+    save_manual_train(data)
+    (RESOURCES_DIR / image).unlink()
+
+    return jsonify(ok=True)
+
+
 def _round_rect(box: dict, region: dict) -> dict:
     x0 = round(box["x"] - region["x"])
     y0 = round(box["y"] - region["y"])

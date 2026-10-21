@@ -39,7 +39,7 @@
         Unreviewed only
       </label>
       <span id="image-status" class="text-sm opacity-70 mr-auto"></span>
-      <span class="text-sm opacity-50">{{ images|length }} images found</span>
+      <span id="image-count" class="text-sm opacity-50">{{ images|length }} images found</span>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
@@ -79,6 +79,7 @@
 
         <button id="save-btn" class="btn btn-success btn-block mt-6" disabled>Save</button>
         <p id="save-status" class="text-sm mt-2"></p>
+        <button id="delete-btn" class="btn btn-error btn-outline btn-block btn-sm mt-4" disabled>Delete image + entry</button>
         <p id="post-instructions" class="text-sm mt-2 opacity-90">Once training regions are defined, run [placeholder] to begin training models</p>
       </div>
 
@@ -99,6 +100,7 @@
     const KNOWN_GIFTS = {{ known_gifts | tojson }};
     const SAVE_URL = "{{ url_for('trainer.save') }}";
     const AUTODETECT_URL = "{{ url_for('trainer.autodetect') }}";
+    const DELETE_URL = "{{ url_for('trainer.delete') }}";
   </script>
   <script src="{{ url_for('static', filename='trainer.js') }}"></script>
 {% endblock %}

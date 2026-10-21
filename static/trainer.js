@@ -17,6 +17,9 @@ const autodetectStatus = document.getElementById("autodetect-status");
 const giftList = document.getElementById("gift-list");
 const saveBtn = document.getElementById("save-btn");
 const saveStatus = document.getElementById("save-status");
+const deleteBtn = document.getElementById("delete-btn");
+const imageCount = document.getElementById("image-count");
+const imageDatalist = document.getElementById("image-datalist");
 const ignoreTrainingToggle = document.getElementById("ignore-training-toggle");
 const unreviewedOnlyToggle = document.getElementById("unreviewed-only-toggle");
 
@@ -101,6 +104,7 @@ function loadImage(path) {
   autodetectStatus.textContent = "";
 
   ignoreTrainingToggle.disabled = false;
+  deleteBtn.disabled = false;
   ignoreTrainingToggle.checked = currentEntry.ignore_for_training;
 
   img = new Image();
@@ -447,6 +451,63 @@ saveBtn.addEventListener("click", async () => {
   } catch (err) {
     saveStatus.textContent = "Save failed: " + err.message;
     saveStatus.className = "text-sm mt-2 text-error";
+  }
+});
+
+deleteBtn.addEventListener("click", async () => {
+  if (!currentImage) return;
+  const path = currentImage;
+  const ok = confirm(`Permanently delete ${path} from disk and remove its training entry? This cannot be undone.`);
+  if (!ok) return;
+
+  deleteBtn.disabled = true;
+  saveStatus.textContent = "Deleting…";
+  saveStatus.className = "text-sm mt-2 opacity-70";
+
+  try {
+    const resp = await fetch(DELETE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: path }),
+    });
+
+    if (!resp.ok) {
+      throw new Error((await resp.text()) || resp.statusText);
+    }
+  } catch (err) {
+    deleteBtn.disabled = false;
+    saveStatus.textContent = "Delete failed: " + err.message;
+    saveStatus.className = "text-sm mt-2 text-error";
+    return;
+  }
+
+  const images = navigableImages();
+  const nextPath = images.length > 1 ? images[(images.indexOf(path) + 1) % images.length] : null;
+
+  IMAGES.splice(IMAGES.indexOf(path), 1);
+  delete MANUAL_DATA.gifts[path];
+  imageDatalist.querySelectorAll("option").forEach((opt) => {
+    if (opt.value === path) opt.remove();
+  });
+  imageCount.textContent = `${IMAGES.length} images found`;
+
+  if (nextPath && nextPath !== path) {
+    imageSearch.value = nextPath;
+    loadImage(nextPath);
+    saveStatus.textContent = `Deleted ${path}.`;
+    saveStatus.className = "text-sm mt-2 text-success";
+  } else {
+    currentImage = null;
+    currentEntry = { region: null, gifts: [], ignore_for_training: false };
+    img = null;
+    imageSearch.value = "";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ignoreTrainingToggle.disabled = true;
+    imageStatus.textContent = "";
+    renderSidebar();
+    updateDrawHint();
+    saveStatus.textContent = `Deleted ${path}.`;
+    saveStatus.className = "text-sm mt-2 text-success";
   }
 });
 
