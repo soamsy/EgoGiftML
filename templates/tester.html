@@ -31,6 +31,15 @@
         <button id="prev-image-btn" type="button" class="btn btn-xs join-item">‹ Prev (PgUp)</button>
         <button id="next-image-btn" type="button" class="btn btn-xs join-item">Next › (PgDown)</button>
       </div>
+      <label class="flex items-center gap-2 text-sm">
+        <input id="unreviewed-only-toggle" type="checkbox" class="checkbox checkbox-xs">
+        Unreviewed only
+      </label>
+      <div class="tooltip tooltip-bottom" data-tip="Mark filtered results as reviewed">
+        <button id="mark-reviewed-btn" type="button" class="btn btn-xs btn-ghost btn-square" aria-label="Mark as reviewed">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </button>
+      </div>
       <span id="image-position" class="text-sm opacity-70 mr-auto"></span>
       <span id="image-count" class="text-sm opacity-50">{{ images|length }} images total</span>
     </div>
@@ -194,6 +203,12 @@
         <h2 class="font-semibold">Dataset Evaluation</h2>
         <span id="eval-summary" class="text-xs opacity-70"></span>
       </div>
+      <div class="flex items-center gap-2 mb-2">
+        <button id="toggle-incorrect-review-btn" type="button" class="btn btn-xs btn-outline">Mark incorrect for review</button>
+        <button id="review-here-btn" type="button" class="btn btn-xs btn-outline">Review here</button>
+        <a href="{{ url_for('trainer.index', unreviewed=1) }}" class="btn btn-xs btn-outline">Review in Manual Trainer ›</a>
+        <span id="review-status" class="text-xs"></span>
+      </div>
       <div class="overflow-x-auto">
         <table class="table table-xs">
           <thead>
@@ -209,6 +224,7 @@
               <th>Missed</th>
               <th>Avg det. conf</th>
               <th>Avg cls. conf</th>
+              <th>Mark for review</th>
             </tr>
           </thead>
           <tbody id="eval-body"></tbody>
@@ -216,6 +232,19 @@
       </div>
     </div>
   </div>
+
+  <dialog id="mark-reviewed-modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg mb-2">Mark as reviewed</h3>
+      <p id="mark-reviewed-message"></p>
+      <p id="mark-reviewed-status" class="text-sm mt-2"></p>
+      <div class="modal-action">
+        <form method="dialog"><button class="btn btn-sm">Cancel</button></form>
+        <button id="mark-reviewed-confirm" type="button" class="btn btn-sm btn-primary">Mark reviewed</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -225,6 +254,7 @@
     const RUN_URL = "{{ url_for('tester.run') }}";
     const EVALUATE_URL = "{{ url_for('tester.evaluate') }}";
     const COMPARE_URL = "{{ url_for('tester.compare') }}";
+    const SET_REVIEWED_URL = "{{ url_for('trainer.set_reviewed') }}";
   </script>
   <script src="{{ url_for('static', filename='image_picker.js') }}"></script>
   <script src="{{ url_for('static', filename='tester.js') }}"></script>

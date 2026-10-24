@@ -32,6 +32,14 @@ const compareStatus = document.getElementById("compare-status");
 const compareSection = document.getElementById("compare-section");
 const compareSummary = document.getElementById("compare-summary");
 const compareBody = document.getElementById("compare-body");
+const toggleIncorrectReviewBtn = document.getElementById("toggle-incorrect-review-btn");
+const reviewStatus = document.getElementById("review-status");
+const unreviewedOnlyToggle = document.getElementById("unreviewed-only-toggle");
+const markReviewedBtn = document.getElementById("mark-reviewed-btn");
+const markReviewedModal = document.getElementById("mark-reviewed-modal");
+const markReviewedMessage = document.getElementById("mark-reviewed-message");
+const markReviewedStatus = document.getElementById("mark-reviewed-status");
+const markReviewedConfirm = document.getElementById("mark-reviewed-confirm");
 
 const STATUS_COLORS = {
   matched: "#4ade80",
@@ -55,6 +63,7 @@ let dragging = false;
 let dragStart = null;
 let previewRect = null;
 let lastResults = [];
+let lastEvalRows = [];
 let lastCompare = null; // {region, ground_truth, predictions, matches, missed_indices, score} | null
 
 function imageUrl(path) {
@@ -461,11 +470,62 @@ compareBtn.addEventListener("click", async () => {
   }
 });
 
+function isIncorrect(r) {
+  return !!(r.missed || r.misclassified || r.false_positives);
+}
+
+function isMarkedForReview(path) {
+  return !!(MANUAL_DATA.gifts[path] && MANUAL_DATA.gifts[path].unreviewed);
+}
+
+async function setForReview(images, forReview) {
+  reviewStatus.textContent = "Saving…";
+  reviewStatus.className = "text-xs opacity-70";
+  try {
+    const resp = await fetch(SET_REVIEWED_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images, reviewed: !forReview }),
+    });
+    if (!resp.ok) {
+      throw new Error((await resp.text()) || resp.statusText);
+    }
+    const data = await resp.json();
+    Object.assign(MANUAL_DATA.gifts, data.entries);
+    const marked = Object.values(MANUAL_DATA.gifts).filter((e) => e.unreviewed).length;
+    reviewStatus.textContent = `${marked} image(s) marked for review.`;
+    reviewStatus.className = "text-xs text-success";
+  } catch (err) {
+    reviewStatus.textContent = "Failed: " + err.message;
+    reviewStatus.className = "text-xs text-error";
+  }
+  syncReviewToggles();
+  picker.refresh();
+}
+
+function syncReviewToggles() {
+  evalBody.querySelectorAll(".review-toggle").forEach((el) => {
+    el.checked = isMarkedForReview(el.dataset.image);
+  });
+  const incorrect = lastEvalRows.filter(isIncorrect);
+  toggleIncorrectReviewBtn.disabled = incorrect.length === 0;
+  toggleIncorrectReviewBtn.textContent = incorrect.length && incorrect.every((r) => isMarkedForReview(r.image))
+    ? `Unmark ${incorrect.length} incorrect`
+    : `Mark ${incorrect.length} incorrect for review`;
+}
+
+toggleIncorrectReviewBtn.addEventListener("click", () => {
+  const incorrect = lastEvalRows.filter(isIncorrect).map((r) => r.image);
+  const allMarked = incorrect.every(isMarkedForReview);
+  setForReview(incorrect, !allMarked);
+});
+
 function renderEvalTable(rows) {
+  lastEvalRows = rows;
   evalBody.innerHTML = "";
   rows.forEach((r) => {
     const row = document.createElement("tr");
-    if (r.missed || r.misclassified || r.false_positives) row.classList.add("bg-error/10");
+    if (isIncorrect(r)) row.classList.add("bg-error/10");
     else if (r.unclassified) row.classList.add("bg-warning/10");
 
     row.innerHTML = `
@@ -480,13 +540,18 @@ function renderEvalTable(rows) {
       <td>${r.missed || ""}</td>
       <td>${r.avg_detector_conf !== null ? (r.avg_detector_conf * 100).toFixed(0) + "%" : "—"}</td>
       <td>${r.avg_classifier_conf !== null ? (r.avg_classifier_conf * 100).toFixed(0) + "%" : "—"}</td>
+      <td><input type="checkbox" class="toggle toggle-xs toggle-warning review-toggle"></td>
     `;
+    const reviewToggle = row.querySelector(".review-toggle");
+    reviewToggle.dataset.image = r.image;
+    reviewToggle.addEventListener("change", () => setForReview([r.image], reviewToggle.checked));
     row.querySelector(".load-eval-btn").addEventListener("click", () => {
       loadImage(r.image);
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
     evalBody.appendChild(row);
   });
+  syncReviewToggles();
 }
 
 evalBtn.addEventListener("click", async () => {
@@ -533,7 +598,65 @@ const picker = createImagePicker({
   positionEl: document.getElementById("image-position"),
   images: IMAGES,
   giftNames: (path) => ((MANUAL_DATA.gifts[path] || {}).gifts || []).map((g) => g.name).filter(Boolean),
+  extraFilter: (path) => !unreviewedOnlyToggle.checked || isMarkedForReview(path),
   onSelect: loadImage,
+});
+
+if (new URLSearchParams(location.search).has("unreviewed")) unreviewedOnlyToggle.checked = true;
+picker.refresh();
+
+unreviewedOnlyToggle.addEventListener("change", () => picker.refresh());
+
+document.getElementById("review-here-btn").addEventListener("click", () => {
+  unreviewedOnlyToggle.checked = true;
+  picker.refresh();
+  const first = picker.filtered()[0];
+  if (!first) {
+    reviewStatus.textContent = "No images marked for review.";
+    reviewStatus.className = "text-xs text-warning";
+    return;
+  }
+  loadImage(first);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+let pendingReviewed = [];
+
+markReviewedBtn.addEventListener("click", () => {
+  pendingReviewed = picker.filtered().filter(isMarkedForReview);
+  const total = picker.filtered().length;
+  markReviewedMessage.textContent = pendingReviewed.length
+    ? `Are you sure you'd like to mark ${pendingReviewed.length} of ${total} filtered image(s) as reviewed?`
+    : `None of the ${total} filtered image(s) are unreviewed.`;
+  markReviewedConfirm.disabled = pendingReviewed.length === 0;
+  markReviewedStatus.textContent = "";
+  markReviewedModal.showModal();
+});
+
+markReviewedConfirm.addEventListener("click", async () => {
+  markReviewedConfirm.disabled = true;
+  markReviewedStatus.textContent = "Saving…";
+  markReviewedStatus.className = "text-sm mt-2 opacity-70";
+
+  try {
+    const resp = await fetch(SET_REVIEWED_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: pendingReviewed, reviewed: true }),
+    });
+    if (!resp.ok) {
+      throw new Error((await resp.text()) || resp.statusText);
+    }
+    const data = await resp.json();
+    Object.assign(MANUAL_DATA.gifts, data.entries);
+    picker.refresh();
+    syncReviewToggles();
+    markReviewedModal.close();
+  } catch (err) {
+    markReviewedConfirm.disabled = false;
+    markReviewedStatus.textContent = "Failed: " + err.message;
+    markReviewedStatus.className = "text-sm mt-2 text-error";
+  }
 });
 
 function navigateImage(delta) {

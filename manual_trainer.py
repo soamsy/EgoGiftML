@@ -136,6 +136,33 @@ def delete():
     return jsonify(ok=True)
 
 
+@trainer_bp.route("/set_reviewed", methods=["POST"])
+def set_reviewed():
+    payload = request.get_json(silent=True)
+    if not payload or not isinstance(payload.get("images"), list):
+        abort(400, "images must be a list")
+    reviewed = bool(payload.get("reviewed", True))
+
+    data = load_manual_train()
+    marked = []
+    for image in payload["images"]:
+        entry = data["gifts"].get(image)
+        if not entry or bool(entry.get("unreviewed")) != reviewed:
+            continue
+        if reviewed:
+            data["gifts"][image] = {
+                "region": entry.get("region"),
+                "gifts": entry.get("gifts", []),
+                "ignore_for_training": bool(entry.get("ignore_for_training", False)),
+            }
+        else:
+            entry["unreviewed"] = True
+        marked.append(image)
+    save_manual_train(data)
+
+    return jsonify(ok=True, entries={image: data["gifts"][image] for image in marked})
+
+
 def _round_rect(box: dict, region: dict) -> dict:
     x0 = round(box["x"] - region["x"])
     y0 = round(box["y"] - region["y"])

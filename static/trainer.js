@@ -22,7 +22,13 @@ const imageCount = document.getElementById("image-count");
 const imageDropdown = document.getElementById("image-dropdown");
 const currentImageLabel = document.getElementById("current-image");
 const ignoreTrainingToggle = document.getElementById("ignore-training-toggle");
+const unsavedWarning = document.getElementById("unsaved-warning");
 const unreviewedOnlyToggle = document.getElementById("unreviewed-only-toggle");
+const markReviewedBtn = document.getElementById("mark-reviewed-btn");
+const markReviewedModal = document.getElementById("mark-reviewed-modal");
+const markReviewedMessage = document.getElementById("mark-reviewed-message");
+const markReviewedStatus = document.getElementById("mark-reviewed-status");
+const markReviewedConfirm = document.getElementById("mark-reviewed-confirm");
 
 const nameToId = new Map(KNOWN_GIFTS.map((g) => [g.name.trim().toLowerCase(), g.id]));
 
@@ -46,6 +52,20 @@ let dragging = false;
 let dragStart = null;
 let previewRect = null;
 let selectedGiftIndex = null;
+let savedSnapshot = null;
+
+function snapshotEntry(entry) {
+  return JSON.stringify({
+    region: entry.region,
+    gifts: entry.gifts.map((g) => ({ name: g.name || "", subregion: g.subregion })),
+    ignore_for_training: !!entry.ignore_for_training,
+  });
+}
+
+function updateUnsavedWarning() {
+  const dirty = !!currentImage && savedSnapshot !== null && snapshotEntry(currentEntry) !== savedSnapshot;
+  unsavedWarning.classList.toggle("hidden", !dirty);
+}
 
 function imageUrl(path) {
   return "/trainer/image/" + path.split("/").map(encodeURIComponent).join("/");
@@ -99,6 +119,7 @@ function loadImage(path) {
   picker.setCurrent(path);
   currentEntry = cloneEntry(MANUAL_DATA.gifts[path]);
   currentEntry.gifts = sortGiftsReadingOrder(currentEntry.gifts);
+  savedSnapshot = snapshotEntry(currentEntry);
   drawTarget = null;
   selectedGiftIndex = null;
   previewRect = null;
@@ -270,6 +291,7 @@ function updateDrawHint() {
 }
 
 function updateSaveState() {
+  updateUnsavedWarning();
   const valid =
     !!currentImage &&
     currentEntry.gifts.every((g) => g.name && g.name.trim() && g.subregion && resolveId(g.name));
@@ -362,6 +384,7 @@ wholeImageBtn.addEventListener("click", () => {
 
 ignoreTrainingToggle.addEventListener("change", () => {
   currentEntry.ignore_for_training = ignoreTrainingToggle.checked;
+  updateUnsavedWarning();
 });
 
 addGiftBtn.addEventListener("click", () => {
@@ -449,6 +472,8 @@ saveBtn.addEventListener("click", async () => {
 
     const data = await resp.json();
     MANUAL_DATA.gifts[currentImage] = data.entry;
+    savedSnapshot = snapshotEntry(currentEntry);
+    updateUnsavedWarning();
     picker.refresh();
     saveStatus.textContent = "Saved.";
     saveStatus.className = "text-sm mt-2 text-success";
@@ -518,11 +543,56 @@ const picker = createImagePicker({
   positionEl: document.getElementById("image-position"),
   images: IMAGES,
   giftNames: (path) => ((MANUAL_DATA.gifts[path] || {}).gifts || []).map((g) => g.name).filter(Boolean),
-  extraFilter: (path) => !unreviewedOnlyToggle.checked || !!(MANUAL_DATA.gifts[path] && MANUAL_DATA.gifts[path].unreviewed),
+  extraFilter: (path) => !unreviewedOnlyToggle.checked || isUnreviewed(path),
   onSelect: loadImage,
 });
 
+if (new URLSearchParams(location.search).has("unreviewed")) unreviewedOnlyToggle.checked = true;
+picker.refresh();
+
 unreviewedOnlyToggle.addEventListener("change", () => picker.refresh());
+
+function isUnreviewed(path) {
+  return !!(MANUAL_DATA.gifts[path] && MANUAL_DATA.gifts[path].unreviewed);
+}
+
+let pendingReviewed = [];
+
+markReviewedBtn.addEventListener("click", () => {
+  pendingReviewed = picker.filtered().filter(isUnreviewed);
+  const total = picker.filtered().length;
+  markReviewedMessage.textContent = pendingReviewed.length
+    ? `Are you sure you'd like to mark ${pendingReviewed.length} of ${total} filtered image(s) as reviewed?`
+    : `None of the ${total} filtered image(s) are unreviewed.`;
+  markReviewedConfirm.disabled = pendingReviewed.length === 0;
+  markReviewedStatus.textContent = "";
+  markReviewedModal.showModal();
+});
+
+markReviewedConfirm.addEventListener("click", async () => {
+  markReviewedConfirm.disabled = true;
+  markReviewedStatus.textContent = "Saving…";
+  markReviewedStatus.className = "text-sm mt-2 opacity-70";
+
+  try {
+    const resp = await fetch(SET_REVIEWED_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: pendingReviewed, reviewed: true }),
+    });
+    if (!resp.ok) {
+      throw new Error((await resp.text()) || resp.statusText);
+    }
+    const data = await resp.json();
+    Object.assign(MANUAL_DATA.gifts, data.entries);
+    picker.refresh();
+    markReviewedModal.close();
+  } catch (err) {
+    markReviewedConfirm.disabled = false;
+    markReviewedStatus.textContent = "Failed: " + err.message;
+    markReviewedStatus.className = "text-sm mt-2 text-error";
+  }
+});
 
 function navigateImage(dx) {
   const nextPath = picker.neighbor(currentImage, dx);
