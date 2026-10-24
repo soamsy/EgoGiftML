@@ -19,7 +19,8 @@ const saveBtn = document.getElementById("save-btn");
 const saveStatus = document.getElementById("save-status");
 const deleteBtn = document.getElementById("delete-btn");
 const imageCount = document.getElementById("image-count");
-const imageDatalist = document.getElementById("image-datalist");
+const imageDropdown = document.getElementById("image-dropdown");
+const currentImageLabel = document.getElementById("current-image");
 const ignoreTrainingToggle = document.getElementById("ignore-training-toggle");
 const unreviewedOnlyToggle = document.getElementById("unreviewed-only-toggle");
 
@@ -94,6 +95,8 @@ function loadImage(path) {
   }
 
   currentImage = path;
+  currentImageLabel.textContent = path;
+  picker.setCurrent(path);
   currentEntry = cloneEntry(MANUAL_DATA.gifts[path]);
   currentEntry.gifts = sortGiftsReadingOrder(currentEntry.gifts);
   drawTarget = null;
@@ -446,6 +449,7 @@ saveBtn.addEventListener("click", async () => {
 
     const data = await resp.json();
     MANUAL_DATA.gifts[currentImage] = data.entry;
+    picker.refresh();
     saveStatus.textContent = "Saved.";
     saveStatus.className = "text-sm mt-2 text-success";
   } catch (err) {
@@ -481,26 +485,22 @@ deleteBtn.addEventListener("click", async () => {
     return;
   }
 
-  const images = navigableImages();
-  const nextPath = images.length > 1 ? images[(images.indexOf(path) + 1) % images.length] : null;
+  const nextPath = picker.neighbor(path, 1);
 
   IMAGES.splice(IMAGES.indexOf(path), 1);
   delete MANUAL_DATA.gifts[path];
-  imageDatalist.querySelectorAll("option").forEach((opt) => {
-    if (opt.value === path) opt.remove();
-  });
-  imageCount.textContent = `${IMAGES.length} images found`;
+  picker.refresh();
 
   if (nextPath && nextPath !== path) {
-    imageSearch.value = nextPath;
     loadImage(nextPath);
     saveStatus.textContent = `Deleted ${path}.`;
     saveStatus.className = "text-sm mt-2 text-success";
   } else {
     currentImage = null;
+    currentImageLabel.textContent = "";
+    picker.setCurrent(null);
     currentEntry = { region: null, gifts: [], ignore_for_training: false };
     img = null;
-    imageSearch.value = "";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ignoreTrainingToggle.disabled = true;
     imageStatus.textContent = "";
@@ -511,35 +511,27 @@ deleteBtn.addEventListener("click", async () => {
   }
 });
 
-function navigableImages() {
-  if (!unreviewedOnlyToggle.checked) return IMAGES;
-  return IMAGES.filter((path) => MANUAL_DATA.gifts[path] && MANUAL_DATA.gifts[path].unreviewed);
-}
+const picker = createImagePicker({
+  input: imageSearch,
+  dropdown: imageDropdown,
+  countEl: imageCount,
+  positionEl: document.getElementById("image-position"),
+  images: IMAGES,
+  giftNames: (path) => ((MANUAL_DATA.gifts[path] || {}).gifts || []).map((g) => g.name).filter(Boolean),
+  extraFilter: (path) => !unreviewedOnlyToggle.checked || !!(MANUAL_DATA.gifts[path] && MANUAL_DATA.gifts[path].unreviewed),
+  onSelect: loadImage,
+});
+
+unreviewedOnlyToggle.addEventListener("change", () => picker.refresh());
 
 function navigateImage(dx) {
-  const images = navigableImages();
-  if (images.length === 0) {
-    imageStatus.textContent = "no unreviewed images left";
+  const nextPath = picker.neighbor(currentImage, dx);
+  if (!nextPath) {
+    imageStatus.textContent = "no images match the current filter";
     return;
   }
-  const currentIndex = currentImage ? images.indexOf(currentImage) : (dx === 1 ? -1 : 0);
-  const nextIndex = (currentIndex + dx + images.length) % images.length;
-
-  imageSearch.value = images[nextIndex];
-  loadImage(images[nextIndex]);
+  loadImage(nextPath);
 }
-
-imageSearch.addEventListener("change", () => {
-  const value = imageSearch.value.trim();
-  if (IMAGES.includes(value)) loadImage(value);
-});
-
-imageSearch.addEventListener("keydown", (evt) => {
-  if (evt.key === "Enter") {
-    const value = imageSearch.value.trim();
-    if (IMAGES.includes(value)) loadImage(value);
-  }
-});
 
 function isFormField(el) {
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);

@@ -4,6 +4,9 @@ const MAX_H = 700;
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const imageSearch = document.getElementById("image-search");
+const imageDropdown = document.getElementById("image-dropdown");
+const currentImageLabel = document.getElementById("current-image");
+const imageCount = document.getElementById("image-count");
 const imageStatus = document.getElementById("image-status");
 const prevImageBtn = document.getElementById("prev-image-btn");
 const nextImageBtn = document.getElementById("next-image-btn");
@@ -115,6 +118,8 @@ function loadImage(path) {
   }
 
   currentImage = path;
+  currentImageLabel.textContent = path;
+  picker.setCurrent(path);
   const knownEntry = MANUAL_DATA.gifts[path];
   region = knownEntry && knownEntry.region ? { ...knownEntry.region } : null;
   drawingRegion = false;
@@ -477,7 +482,6 @@ function renderEvalTable(rows) {
       <td>${r.avg_classifier_conf !== null ? (r.avg_classifier_conf * 100).toFixed(0) + "%" : "—"}</td>
     `;
     row.querySelector(".load-eval-btn").addEventListener("click", () => {
-      imageSearch.value = r.image;
       loadImage(r.image);
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -522,26 +526,24 @@ evalBtn.addEventListener("click", async () => {
   }
 });
 
+const picker = createImagePicker({
+  input: imageSearch,
+  dropdown: imageDropdown,
+  countEl: imageCount,
+  positionEl: document.getElementById("image-position"),
+  images: IMAGES,
+  giftNames: (path) => ((MANUAL_DATA.gifts[path] || {}).gifts || []).map((g) => g.name).filter(Boolean),
+  onSelect: loadImage,
+});
+
 function navigateImage(delta) {
-  if (IMAGES.length === 0) return;
-  const currentIndex = currentImage ? IMAGES.indexOf(currentImage) : (delta === 1 ? -1 : 0);
-  const nextIndex = (currentIndex + delta + IMAGES.length) % IMAGES.length;
-
-  imageSearch.value = IMAGES[nextIndex];
-  loadImage(IMAGES[nextIndex]);
-}
-
-imageSearch.addEventListener("change", () => {
-  const value = imageSearch.value.trim();
-  if (IMAGES.includes(value)) loadImage(value);
-});
-
-imageSearch.addEventListener("keydown", (evt) => {
-  if (evt.key === "Enter") {
-    const value = imageSearch.value.trim();
-    if (IMAGES.includes(value)) loadImage(value);
+  const nextPath = picker.neighbor(currentImage, delta);
+  if (!nextPath) {
+    imageStatus.textContent = "no images match the current filter";
+    return;
   }
-});
+  loadImage(nextPath);
+}
 
 function isFormField(el) {
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
