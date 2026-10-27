@@ -1,6 +1,6 @@
 {
-  "version": "v25",
-  "trained_at": "2026-10-21T00:25:41.518825+00:00",
+  "version": "v32",
+  "trained_at": "2026-10-24T08:15:59.834252+00:00",
   "args": {
     "repeats": 24,
     "seed": 0,
@@ -14,19 +14,19 @@
     "keep_tmp": false
   },
   "dataset": {
-    "manual_images": 628,
-    "synthetic_images": 1817
+    "manual_images": 708,
+    "synthetic_images": 1819
   },
   "detector_metrics": {
-    "metrics/precision(B)": 0.9994485207013021,
-    "metrics/recall(B)": 0.9988304093567252,
-    "metrics/mAP50(B)": 0.9949960983222786,
-    "metrics/mAP50-95(B)": 0.9091259776552164,
-    "fitness": 0.9091259776552164,
+    "metrics/precision(B)": 0.9976122852104211,
+    "metrics/recall(B)": 0.9985228754091847,
+    "metrics/mAP50(B)": 0.995,
+    "metrics/mAP50-95(B)": 0.8974881696681564,
+    "fitness": 0.8974881696681564,
     "imgsz": 384
   },
   "classifier_metrics": {
-    "val_acc": 1.0,
-    "num_classes": 451
+    "val_acc": 0.991304347826087,
+    "num_classes": 460
   }
 }
